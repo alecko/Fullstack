@@ -2,22 +2,18 @@ import { useEffect, useState } from 'react'
 import PhoneBookEntries from './components/PhoneBookEntries'
 import Filter from './components/Filter'
 import EntryForm from './components/EntryForm'
-import axios from 'axios'
+import entryService from './services/entries'
 
 const App = () => {
   const [persons, setPersons] = useState([
-    
+
   ])
 
-   useEffect(()=>{
-    axios
-    .get('http://localhost:3001/persons')
-    .then(response => setPersons(response.data))
-   }, [])
-
-  
-  
-    
+  useEffect(() => {
+    entryService
+      .getAll()
+      .then(response => setPersons(response.data))
+  }, [])
 
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
@@ -35,22 +31,41 @@ const App = () => {
     setSearch(event.target.value)
   }
 
-  function ExistsEntry(name) {
-    return persons.find((p) => p.name.toUpperCase().trim() === name.toUpperCase().trim()) !== undefined
+  function GetEntry(name) {
+    return persons.find((p) => p.name.toUpperCase().trim() === name.toUpperCase().trim())
+  }
+
+  function handleEntryDelete(entry) {
+    if (window.confirm(`Confirm the deletion of ${entry.name} - ${entry.number}`)) {
+      entryService.deleteEntry(entry.id)
+      setPersons(persons.filter(p => p.id !== entry.id))
+    }
   }
 
   const handleNewEntry = (event) => {
     event.preventDefault()
-    if (!ExistsEntry(newName)) {
-      const newEntry = {
-        name: newName,
-        number: newNumber
-      }
-      setPersons(persons.concat(newEntry))
-      setNewName('')
-      setNewNumber('')
+    const newEntry = {
+      name: newName,
+      number: newNumber
+    }
+    if (GetEntry(newName) === undefined) {
+      entryService
+        .create(newEntry)
+        .then(response => {
+          setPersons(persons.concat(response.data))
+          setNewName('')
+          setNewNumber('')
+        })
     } else {
-      alert(`${newName} is already in the book`)
+      if (window.confirm(`${newName} is already in the book, you want to update the information?`)) {
+        entryService
+          .update(GetEntry(newName).id, newEntry)
+          .then(response => {
+            setPersons(persons.map(p => p.id !== response.data.id ? p : response.data))
+            setNewName('')
+            setNewNumber('')
+          })
+      }
     }
   }
 
@@ -66,7 +81,7 @@ const App = () => {
       <EntryForm handleNewEntry={handleNewEntry} handleNewNumber={handleNewNumber} handleNewName={handleNewName}
         newName={newName} newNumber={newNumber} />
       <h2>Numbers</h2>
-      <PhoneBookEntries entries={search.trim().length > 0 ? shownPersons : persons} />
+      <PhoneBookEntries entries={search.trim().length > 0 ? shownPersons : persons} handleEntryDelete={handleEntryDelete} />
     </div>
   )
 }
