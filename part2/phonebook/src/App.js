@@ -3,11 +3,10 @@ import PhoneBookEntries from './components/PhoneBookEntries'
 import Filter from './components/Filter'
 import EntryForm from './components/EntryForm'
 import entryService from './services/entries'
+import Notification from './components/Notification'
 
 const App = () => {
-  const [persons, setPersons] = useState([
-
-  ])
+  const [persons, setPersons] = useState([])
 
   useEffect(() => {
     entryService
@@ -18,6 +17,7 @@ const App = () => {
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
+  const [message, setMessage] = useState({ text: '', msgStyle: '' })
 
   const handleNewName = (event) => {
     setNewName(event.target.value)
@@ -38,6 +38,9 @@ const App = () => {
   function handleEntryDelete(entry) {
     if (window.confirm(`Confirm the deletion of ${entry.name} - ${entry.number}`)) {
       entryService.deleteEntry(entry.id)
+        .catch(error => {
+          setMessage({ text: 'There was an error deleting the phonebook entry', msgStyle: 'error' })
+        })
       setPersons(persons.filter(p => p.id !== entry.id))
     }
   }
@@ -55,7 +58,11 @@ const App = () => {
           setPersons(persons.concat(response.data))
           setNewName('')
           setNewNumber('')
+          setMessage({ text: `${response.data.name} was added to the phonebook`, msgStyle: 'success' })
+        }).catch(error => {
+          setMessage({ text: 'There was an error creating the phonebook entry', msgStyle: 'error' })
         })
+
     } else {
       if (window.confirm(`${newName} is already in the book, you want to update the information?`)) {
         entryService
@@ -64,9 +71,16 @@ const App = () => {
             setPersons(persons.map(p => p.id !== response.data.id ? p : response.data))
             setNewName('')
             setNewNumber('')
+            setMessage({ text: `${response.data.name} info was updated in the phonebook`, msgStyle: 'success' })
+            console.log('m', message)
+          }).catch(error => {
+            setMessage({ text: 'There was an error updating the phonebook entry', msgStyle: 'error' })
           })
       }
     }
+    setTimeout(() => {
+      setMessage({ text: '', msgStyle: '' })
+    }, 5000)
   }
 
   const shownPersons = persons.filter((p) => {
@@ -75,6 +89,7 @@ const App = () => {
 
   return (
     <div>
+      <Notification message={message.text} msgStyle={message.msgStyle} />
       <h2>Phonebook</h2>
       Search <Filter handleSearch={handleSearch} searhc={search} />
       <h3>Add a new</h3>
